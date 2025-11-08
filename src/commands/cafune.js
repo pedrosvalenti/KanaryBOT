@@ -56,7 +56,7 @@ module.exports = {
 
     // Coletor de interação do botão
     const sent = await interaction.fetchReply();
-    const collector = sent.createMessageComponentCollector({ time: 60_000 }); // 60s
+    const collector = sent.createMessageComponentCollector({ time: 120_000 }); // 60s
 
     collector.on('collect', async i => {
       if (i.customId !== 'retribuir') return;
