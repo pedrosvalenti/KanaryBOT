@@ -38,17 +38,3 @@ GUILD_ID=opcional_id_da_guild_para_registro_rapido
 npm start
 ```
 
-## Uso
-- Execute `/ping` para ver resposta com botões. Clique em "Info do bot" para ver uma resposta efêmera.
-- Execute `/components` para ver o contador que é atualizado pelo botão "Incrementar" (a mensagem é reescrita com o novo contador — exemplo de uso de components em vez de embed).
-
-## Observações sobre "Componentes v2"
-- O Discord tem evoluído as APIs de componentes; aqui usamos os Message Components (ActionRow, Button, Select, Modal) via `discord.js`.
-- O exemplo evita o uso de embeds e mostra como transmitir informação e UI diretamente com componentes e atualização de mensagem.
-
-## Próximos passos sugeridos
-- Adicionar armazenamento persistente para contadores (ex: um banco leve ou JSON) se quiser manter estado entre reinícios.
-- Registrar comandos globalmente para produção (requer mais tempo para propagar).
-- Implementar mais components: modals com TextInput, selects dinâmicos, etc.
-
-Se quiser, eu adapto o scaffold para ES Modules, TypeScript, ou adiciono deploy script separado para registrar comandos globalmente.
