@@ -54,7 +54,7 @@ module.exports = {
       new ButtonBuilder()
         .setCustomId('retribuir')
         .setLabel('Retribuir 💞')
-        .setStyle(ButtonStyle.Danger)
+        .setStyle(ButtonStyle.Primary)
     );
 
     // Envia o embed com o botão
