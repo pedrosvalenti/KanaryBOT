@@ -92,7 +92,7 @@ module.exports = {
         new ButtonBuilder()
           .setCustomId('retribuir')
           .setLabel('Retribuir 💞')
-          .setStyle(ButtonStyle.Danger)
+          .setStyle(ButtonStyle.Primary)
           .setDisabled(true)
       );
       try {
