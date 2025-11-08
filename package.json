@@ -1,0 +1,17 @@
+{
+  "name": "kanarybot",
+  "version": "0.1.0",
+  "description": "Discord bot exemplo usando discord.js e Componentes (v2 style) em vez de embeds",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "keywords": ["discord", "discord.js", "bot"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.11.0",
+    "dotenv": "^16.0.0"
+  }
+}
