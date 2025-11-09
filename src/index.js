@@ -1,7 +1,16 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const { Client, GatewayIntentBits, Partials, Collection, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { 
+  Client, 
+  GatewayIntentBits, 
+  Partials, 
+  Collection, 
+  ActionRowBuilder, 
+  ButtonBuilder, 
+  ButtonStyle, 
+  EmbedBuilder 
+} = require('discord.js');
 
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
@@ -16,7 +25,9 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildPresences
+    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
   ],
   partials: [Partials.Channel]
 });
@@ -78,7 +89,6 @@ client.on('interactionCreate', async interaction => {
 
       // Counter increment: atualiza a mensagem original com novo contador
       if (id === 'counter_inc') {
-        // Mensagem original contém 'Contador: N'
         const msg = interaction.message;
         const match = msg.content.match(/Contador:\s*(\d+)/i);
         let count = 0;
@@ -123,6 +133,35 @@ client.on('interactionCreate', async interaction => {
       // nada
     } else {
       try { await interaction.reply({ content: 'Ocorreu um erro ao executar a interação.', ephemeral: true }); } catch(e){}
+    }
+  }
+});
+
+
+// 📬 Quando o bot for mencionado, envia um embed com comandos disponíveis
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
+
+  // Se o bot for mencionado
+  if (message.mentions.has(client.user)) {
+    // Lista de comandos permitidos
+    const comandosPermitidos = Array.from(client.commands.values())
+      .filter(cmd => !['kick', 'ban', 'addemoji', 'addcargo', 'remcargo'].includes(cmd.data.name))
+      .map(cmd => `</${cmd.data.name}:${cmd.data.id || '0'}> — ${cmd.data.description || 'Sem descrição'}`)
+      .join('\n');
+
+    const embed = new EmbedBuilder()
+      .setColor(0x00AE86)
+      .setTitle('📜 Comandos Disponíveis')
+      .setDescription(comandosPermitidos || 'Nenhum comando disponível para usuários.')
+      .setFooter({ text: `Solicitado por ${message.author.tag}`, iconURL: message.author.displayAvatarURL() })
+      .setTimestamp();
+
+    try {
+      await message.author.send({ embeds: [embed] });
+      await message.reply({ content: '📬 Te enviei uma mensagem privada com os comandos disponíveis!', allowedMentions: { repliedUser: false } });
+    } catch {
+      await message.reply({ embeds: [embed], allowedMentions: { repliedUser: false } });
     }
   }
 });
