@@ -51,9 +51,11 @@ if (fs.existsSync(commandsPath)) {
 client.once('ready', async () => {
   console.log(`Logado como ${client.user.tag}`);
 
-  // ✅ Define o status "Assistindo Pedrozzy"
+  // ✅ Define status personalizado com "Assistindo **Pedrozzy**"
   client.user.setPresence({
-    activities: [{ name: 'Pedrozzy', type: ActivityType.Watching }],
+    activities: [
+      { name: 'Assistindo **Pedrozzy**', type: 4 } // 4 = CUSTOM STATUS
+    ],
     status: 'online' // opções: online, idle, dnd, invisible
   });
 
