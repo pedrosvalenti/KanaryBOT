@@ -54,7 +54,7 @@ client.once('ready', async () => {
   // ✅ Define status personalizado com "Assistindo **Pedrozzy**"
   client.user.setPresence({
     activities: [
-      { name: 'Assistindo **Pedrozzy**', type: 4 } // 4 = CUSTOM STATUS
+      { name: 'Assistindo o Pedrozzy', type: 4 } // 4 = CUSTOM STATUS
     ],
     status: 'online' // opções: online, idle, dnd, invisible
   });
