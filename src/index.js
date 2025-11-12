@@ -9,7 +9,8 @@ const {
   ActionRowBuilder, 
   ButtonBuilder, 
   ButtonStyle, 
-  EmbedBuilder 
+  EmbedBuilder, 
+  ActivityType // ← Importante pra definir o tipo de status
 } = require('discord.js');
 
 const token = process.env.DISCORD_TOKEN;
@@ -50,6 +51,12 @@ if (fs.existsSync(commandsPath)) {
 client.once('ready', async () => {
   console.log(`Logado como ${client.user.tag}`);
 
+  // ✅ Define o status "Assistindo Pedrozzy"
+  client.user.setPresence({
+    activities: [{ name: 'Pedrozzy', type: ActivityType.Watching }],
+    status: 'online' // opções: online, idle, dnd, invisible
+  });
+
   // Registra comandos rapidamente em uma guild de desenvolvimento se GUILD_ID for fornecido
   try {
     if (guildId) {
@@ -81,13 +88,11 @@ client.on('interactionCreate', async interaction => {
     if (interaction.isButton()) {
       const id = interaction.customId;
 
-      // Ping info button
       if (id === 'ping_info') {
         await interaction.reply({ content: `Bot: ${client.user.tag}\nUptime: ${Math.floor(process.uptime())}s`, ephemeral: true });
         return;
       }
 
-      // Counter increment: atualiza a mensagem original com novo contador
       if (id === 'counter_inc') {
         const msg = interaction.message;
         const match = msg.content.match(/Contador:\s*(\d+)/i);
@@ -111,40 +116,33 @@ client.on('interactionCreate', async interaction => {
         return;
       }
 
-      // Qualquer outro botão personalizado
       await interaction.reply({ content: `Botão ${id} clicado (handler padrão).`, ephemeral: true });
       return;
     }
 
-    // Select menus (se usados no futuro)
     if (interaction.isStringSelectMenu && interaction.isStringSelectMenu()) {
       await interaction.reply({ content: `Você selecionou: ${interaction.values.join(', ')}`, ephemeral: true });
       return;
     }
 
-    // Modals (se usados no futuro)
     if (interaction.isModalSubmit && interaction.isModalSubmit()) {
       await interaction.reply({ content: `Modal recebido: ${interaction.customId}`, ephemeral: true });
       return;
     }
   } catch (err) {
     console.error('Erro ao processar interação:', err);
-    if (interaction.replied || interaction.deferred) {
-      // nada
-    } else {
-      try { await interaction.reply({ content: 'Ocorreu um erro ao executar a interação.', ephemeral: true }); } catch(e){}
+    if (!interaction.replied && !interaction.deferred) {
+      try { 
+        await interaction.reply({ content: 'Ocorreu um erro ao executar a interação.', ephemeral: true }); 
+      } catch(e){}
     }
   }
 });
 
-
-// 📬 Quando o bot for mencionado, envia um embed com comandos disponíveis
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
-  // Se o bot for mencionado
   if (message.mentions.has(client.user)) {
-    // Lista de comandos permitidos
     const comandosPermitidos = Array.from(client.commands.values())
       .filter(cmd => !['kick', 'ban', 'addemoji', 'addcargo', 'remcargo'].includes(cmd.data.name))
       .map(cmd => `</${cmd.data.name}:${cmd.data.id || '0'}> — ${cmd.data.description || 'Sem descrição'}`)
