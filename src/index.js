@@ -9,16 +9,19 @@ const {
   ActionRowBuilder, 
   ButtonBuilder, 
   ButtonStyle, 
-  EmbedBuilder, 
-  ActivityType // ← Importante pra definir o tipo de status
+  EmbedBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ActivityType
 } = require('discord.js');
 
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
-const guildId = process.env.GUILD_ID; // opcional para registro rápido em dev
+const guildId = process.env.GUILD_ID;
 
 if (!token) {
-  console.error('Faltando DISCORD_TOKEN no .env. Copie .env.example para .env e preencha.');
+  console.error('Faltando DISCORD_TOKEN no .env.');
   process.exit(1);
 }
 
@@ -35,7 +38,21 @@ const client = new Client({
 
 client.commands = new Collection();
 
-// Carrega comandos slash da pasta src/commands
+// Caminho do JSON usado pelo /perfil
+const DATA_PATH = path.join(__dirname, 'commands', 'estrelas.json');
+
+// Funções de banco
+function loadData() {
+  if (!fs.existsSync(DATA_PATH)) fs.writeFileSync(DATA_PATH, JSON.stringify({}));
+  return JSON.parse(fs.readFileSync(DATA_PATH, 'utf8'));
+}
+
+function saveData(data) {
+  fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2));
+}
+
+
+// --------- CARREGAR COMANDOS ----------
 const commandsPath = path.join(__dirname, 'commands');
 if (fs.existsSync(commandsPath)) {
   const commandFiles = fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'));
@@ -48,18 +65,17 @@ if (fs.existsSync(commandsPath)) {
   }
 }
 
+// ----------- READY EVENT --------------
 client.once('ready', async () => {
   console.log(`Logado como ${client.user.tag}`);
 
-  // ✅ Define status personalizado com "Assistindo **Pedrozzy**"
   client.user.setPresence({
     activities: [
-      { name: 'Assistindo o Pedrozzy', type: 4 } // 4 = CUSTOM STATUS
+      { name: 'Assistindo o Pedrozzy', type: 4 }
     ],
-    status: 'online' // opções: online, idle, dnd, invisible
+    status: 'online'
   });
 
-  // Registra comandos rapidamente em uma guild de desenvolvimento se GUILD_ID for fornecido
   try {
     if (guildId) {
       const guild = await client.guilds.fetch(guildId);
@@ -68,17 +84,18 @@ client.once('ready', async () => {
         await guild.commands.set(cmds);
         console.log(`Comandos registrados na guild ${guildId}`);
       }
-    } else {
-      console.log('GUILD_ID não definido. Para registro rápido em dev defina GUILD_ID no .env.');
     }
   } catch (err) {
-    console.warn('Erro ao registrar comandos na guild (sem problemas, pode registrar manualmente):', err.message);
+    console.warn('Erro ao registrar comandos:', err.message);
   }
 });
 
+
+// ------------ INTERAÇÕES ---------------
 client.on('interactionCreate', async interaction => {
   try {
-    // Slash commands
+
+    // -------- SLASH COMMANDS --------
     if (interaction.isChatInputCommand()) {
       const command = client.commands.get(interaction.commandName);
       if (!command) return;
@@ -86,10 +103,32 @@ client.on('interactionCreate', async interaction => {
       return;
     }
 
-    // Buttons
+    // -------- BOTÕES --------
     if (interaction.isButton()) {
+
       const id = interaction.customId;
 
+      // 🖼️ BOTÃO "alterar banner"
+      if (id === 'alterar_banner') {
+
+        const modal = new ModalBuilder()
+          .setCustomId('modal_banner')
+          .setTitle('Alterar Banner do Perfil');
+
+        const urlInput = new TextInputBuilder()
+          .setCustomId('banner_url')
+          .setLabel('URL da nova imagem')
+          .setPlaceholder('https://exemplo.com/imagem.png')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true);
+
+        const row = new ActionRowBuilder().addComponents(urlInput);
+        modal.addComponents(row);
+
+        return interaction.showModal(modal);
+      }
+
+      // -------- outros botões seus ----------
       if (id === 'ping_info') {
         await interaction.reply({ content: `Bot: ${client.user.tag}\nUptime: ${Math.floor(process.uptime())}s`, ephemeral: true });
         return;
@@ -98,13 +137,14 @@ client.on('interactionCreate', async interaction => {
       if (id === 'counter_inc') {
         const msg = interaction.message;
         const match = msg.content.match(/Contador:\s*(\d+)/i);
-        let count = 0;
-        if (match) count = parseInt(match[1], 10);
+        let count = match ? parseInt(match[1], 10) : 0;
         count++;
+
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId('counter_inc').setLabel('Incrementar').setStyle(ButtonStyle.Primary),
           new ButtonBuilder().setCustomId('counter_reset').setLabel('Resetar').setStyle(ButtonStyle.Secondary)
         );
+
         await interaction.update({ content: `Contador: ${count}`, components: [row] });
         return;
       }
@@ -114,33 +154,55 @@ client.on('interactionCreate', async interaction => {
           new ButtonBuilder().setCustomId('counter_inc').setLabel('Incrementar').setStyle(ButtonStyle.Primary),
           new ButtonBuilder().setCustomId('counter_reset').setLabel('Resetar').setStyle(ButtonStyle.Secondary)
         );
+
         await interaction.update({ content: `Contador: 0`, components: [row] });
         return;
       }
 
-      await interaction.reply({ content: `Botão ${id} clicado (handler padrão).`, ephemeral: true });
+      await interaction.reply({ content: `Botão ${id} clicado.`, ephemeral: true });
       return;
     }
 
-    if (interaction.isStringSelectMenu && interaction.isStringSelectMenu()) {
+    // -------- SELECT MENUS --------
+    if (interaction.isStringSelectMenu()) {
       await interaction.reply({ content: `Você selecionou: ${interaction.values.join(', ')}`, ephemeral: true });
       return;
     }
 
-    if (interaction.isModalSubmit && interaction.isModalSubmit()) {
-      await interaction.reply({ content: `Modal recebido: ${interaction.customId}`, ephemeral: true });
+    // -------- MODAL BANNER --------
+    if (interaction.isModalSubmit()) {
+
+      if (interaction.customId === 'modal_banner') {
+        const bannerUrl = interaction.fields.getTextInputValue('banner_url');
+
+        const data = loadData();
+        if (!data[interaction.user.id]) data[interaction.user.id] = { estrelas: 0 };
+
+        data[interaction.user.id].customBanner = bannerUrl;
+        saveData(data);
+
+        return interaction.reply({
+          content: `🖼️ Seu banner foi atualizado!\nNova imagem:\n${bannerUrl}`,
+          ephemeral: true,
+        });
+      }
+
+      await interaction.reply({ content: `Modal: ${interaction.customId}`, ephemeral: true });
       return;
     }
+
   } catch (err) {
     console.error('Erro ao processar interação:', err);
     if (!interaction.replied && !interaction.deferred) {
-      try { 
-        await interaction.reply({ content: 'Ocorreu um erro ao executar a interação.', ephemeral: true }); 
-      } catch(e){}
+      try {
+        await interaction.reply({ content: 'Ocorreu um erro na interação.', ephemeral: true });
+      } catch {}
     }
   }
 });
 
+
+// ----------- MENTION HELP ---------------
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
@@ -153,13 +215,13 @@ client.on('messageCreate', async (message) => {
     const embed = new EmbedBuilder()
       .setColor(0x00AE86)
       .setTitle('📜 Comandos Disponíveis')
-      .setDescription(comandosPermitidos || 'Nenhum comando disponível para usuários.')
+      .setDescription(comandosPermitidos || 'Nenhum comando disponível.')
       .setFooter({ text: `Solicitado por ${message.author.tag}`, iconURL: message.author.displayAvatarURL() })
       .setTimestamp();
 
     try {
       await message.author.send({ embeds: [embed] });
-      await message.reply({ content: '📬 Te enviei uma mensagem privada com os comandos disponíveis!', allowedMentions: { repliedUser: false } });
+      await message.reply({ content: '📬 Te enviei uma DM com os comandos!', allowedMentions: { repliedUser: false } });
     } catch {
       await message.reply({ embeds: [embed], allowedMentions: { repliedUser: false } });
     }
